@@ -6,7 +6,6 @@
 2. The application is built using [TypeScript](https://www.typescriptlang.org)
 3. React for displaying UI components
 4. Styled-components for styling the UI components
-5. Jest for testing the application
 
 ## Installation
 
@@ -48,4 +47,3 @@ VITE_API_URL
 - [TypeScript](https://www.typescriptlang.org)
 - [React](https://reactjs.org)
 - [Styled-components](https://www.styled-components.com)
-- [Jest](https://jestjs.io)
