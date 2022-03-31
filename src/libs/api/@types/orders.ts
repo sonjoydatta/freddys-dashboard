@@ -16,7 +16,7 @@ export interface Customer {
 	surname: string;
 }
 
-export interface Product {
+export interface OrderItem {
 	id: string;
 	image: string;
 	name: string;
@@ -28,7 +28,7 @@ export interface Order {
 	currency: string;
 	customer: Customer;
 	id: string;
-	product: Product;
+	product: OrderItem;
 	status: string;
 	total: number;
 }
