@@ -29,7 +29,9 @@ const Orders = () => {
 				// eslint-disable-next-line no-empty
 			} catch (error) {
 			} finally {
-				setLoading(false);
+				if (isMounted()) {
+					setLoading(false);
+				}
 			}
 		},
 		[isMounted]

@@ -22,6 +22,8 @@ const httpInstance = new HttpService(config.apiURL, {
 	onRefreshToken: (token: string) => {
 		authService.setToken(token);
 	},
-	onUnauthorised: authService.removeToken,
+	onUnauthorised: () => {
+		authService.removeToken();
+	},
 });
 export const dashboardAPI = new DashboardAPI(httpInstance);

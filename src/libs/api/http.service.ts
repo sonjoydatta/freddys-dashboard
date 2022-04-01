@@ -4,6 +4,8 @@ type RequestOptions = {
 	headers?: Record<string, string>;
 };
 
+type RequestBody = string | FormData | null;
+
 type HttpServiceConfig = {
 	getToken?: () => string | null;
 	getRefreshToken?: () => string | null;
@@ -34,24 +36,26 @@ export class HttpService {
 		return this.request<T>('PATCH', url, JSON.stringify(body), options);
 	}
 
-	private async refreshToken(token?: string) {
+	private async refreshToken() {
+		const refreshToken = this.config.getRefreshToken?.();
+		if (!refreshToken) {
+			return null;
+		}
+
 		try {
-			const response = await this.post<{ access_token: string }>(
-				'refresh',
-				{},
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				}
-			);
+			const response = await fetch(`${this.baseURL}/refresh`, {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					Authorization: `Bearer ${refreshToken}`,
+				},
+			});
 
-			if (response.success) {
-				this.config.onRefreshToken?.(response.data.access_token);
-				return response.data.access_token;
+			if (response.ok) {
+				const { access_token } = (await response.json()) as { access_token: string };
+				this.config.onRefreshToken?.(access_token);
+				return access_token;
 			}
-
-			throw new Error(response.error);
 		} catch (error) {
 			return null;
 		}
@@ -60,14 +64,15 @@ export class HttpService {
 	private async request<T>(
 		method: string,
 		url: string,
-		body: string | FormData | null = null,
+		body: RequestBody,
 		options?: RequestOptions
 	): Promise<HttpResponse<T>> {
 		const requestURL = `${this.baseURL}/${url}`;
 
-		const headers: Record<string, string> = {
+		const token = this.config.getToken?.();
+		const headers: RequestOptions['headers'] = {
 			'content-type': 'application/json',
-			Authorization: `Bearer ${this.config.getToken?.() || ''}`,
+			Authorization: token ? `Bearer ${token}` : '',
 			...options?.headers,
 		};
 
@@ -82,27 +87,23 @@ export class HttpService {
 				return { data: await response.json(), success: true };
 			}
 
-			const errorResponse = await response.json().catch(() => ({
-				msg: 'Something went wrong',
-			}));
-
 			if (response.status === 401) {
-				const refreshToken = this.config.getRefreshToken?.();
-				if (refreshToken) {
-					const newRefreshToken = await this.refreshToken(refreshToken);
-					if (newRefreshToken) {
-						return this.request<T>(method, url, body, options);
-					}
+				const newToken = await this.refreshToken();
+				if (newToken) {
+					return this.request<T>(method, url, body, options);
 				}
 
 				this.config.onUnauthorised?.();
-				throw new Error(errorResponse.msg);
 			}
 
-			throw new Error(errorResponse.msg);
+			const error = await response.json().catch(() => ({
+				msg: 'Something went wrong',
+			}));
+
+			throw new Error(error.msg);
 		} catch (error) {
 			if (error instanceof Error) {
-				return { error: error?.message, success: false };
+				return { error: error.message, success: false };
 			}
 
 			return { error: 'Something went wrong', success: false };
